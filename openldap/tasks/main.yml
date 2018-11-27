@@ -1,0 +1,61 @@
+---
+# tasks file for openldap
+# https://dzhorov.com/2017/04/installing-and-configuring-openldap-on-centos-7
+
+- name: Installing OpenLDAP server package
+  yum: name={{ item }} state=latest
+  with_items:
+    - openldap
+    - openldap-servers
+    - openldap-clients
+    - openldap-servers-sql
+    - openldap-devel
+  notify: restart slapd
+
+- name: Configure OpenLDAP database
+  shell: |
+    cp /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG
+    chown ldap: /var/lib/ldap/*
+  become: true
+
+- name: Generate admin password hash
+  shell: slappasswd -h {{ openldap_server_password_hash }} -s {{ openldap_server_rootpw }}
+  register: ldapregrootpw
+
+- name: Template in admin_config_pw.ldif
+  template: src=admin_config_pw.ldif dest=/tmp/admin_config_pw.ldif owner=root group=root mode=0600
+
+- name: Admin password
+  shell: ldapmodify -Y EXTERNAL -H ldapi:/// -f /tmp/admin_config_pw.ldif
+  become: true
+  ignore_errors: True
+
+- name: Copy sshpubkey LDAP schema
+  copy: src=sshpubkey.ldif dest={{ openldap_server_app_path }}/schema owner=root group=root mode=0644
+
+- name: Add LDAP schema
+  shell:  ldapadd -Y EXTERNAL -H ldapi:/// -f {{ openldap_server_app_path }}/schema/{{ item }}.ldif
+  with_items:
+      - cosine
+      - inetorgperson
+      - nis
+      - sshpubkey
+  become: true
+  ignore_errors: True
+
+- name: Template in basedomain.ldif
+  template: src=basedomain.ldif dest=/tmp/basedomain.ldif owner=root group=root mode=0600
+
+- name: Add base configuration
+  shell: ldapadd -x -D "cn=ldapadm,{{ openldap_server_suffix }}" -w {{ openldap_server_rootpw }} -f /tmp/basedomain.ldif
+  become: true
+  ignore_errors: True
+
+- name: Enabling OpenLDAP autostart
+  service: name=slapd enabled=yes state=started
+
+- name: run an ldapquery at the end to make sure it responds
+  command: ldapsearch -x -H ldap://localhost -b {{ openldap_server_suffix }}
+  register: cmd_result
+
+- debug: msg="{{ cmd_result.stdout }}"

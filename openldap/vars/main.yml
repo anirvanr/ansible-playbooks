@@ -1,0 +1,12 @@
+---
+# vars file for openldap
+
+openldap_domain: example.com
+openldap_organization: example
+openldap_server_suffix: dc=example,dc=com
+
+openldap_server_rootdn: cn=Manager,dc=example,dc=com
+openldap_server_rootpw: password
+openldap_server_password_hash: "{SSHA}"
+
+openldap_server_app_path: /etc/openldap

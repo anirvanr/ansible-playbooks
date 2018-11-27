@@ -1,0 +1,17 @@
+dn: {{ openldap_server_suffix }}
+dc: {{ openldap_organization }}
+objectClass: top
+objectClass: domain
+
+dn: cn=ldapadm,{{ openldap_server_suffix }}
+objectClass: organizationalRole
+cn: ldapadm
+description: LDAP Administrator
+
+dn: ou=People,{{ openldap_server_suffix }}
+objectClass: organizationalUnit
+ou: People
+
+dn: ou=Group,{{ openldap_server_suffix }}
+objectClass: organizationalUnit
+ou: Group
