@@ -1,9 +1,10 @@
 dn: cn=config
 changetype: modify
+replace: olcTLSCACertificateFile
+olcTLSCACertificateFile: {{ path }}/certs/ca-bundle.crt
+-
 replace: olcTLSCertificateFile
-olcTLSCertificateFile: {{ app_path }}/certs/{{ domain }}-cert.pem
-
-dn: cn=config
-changetype: modify
+olcTLSCertificateFile: {{ path }}/certs/server.crt
+-
 replace: olcTLSCertificateKeyFile
-olcTLSCertificateKeyFile: {{ app_path }}/certs/{{ domain }}-key.pem
+olcTLSCertificateKeyFile: {{ path }}/certs/server.key

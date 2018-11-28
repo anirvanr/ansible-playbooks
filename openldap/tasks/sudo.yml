@@ -53,13 +53,4 @@
     - user01
     - user02
 
-# - name: wheel group members are absent
-#   ldap_attr:
-#     dn: 'cn=wheel,ou=Groups,{{ suffix }}'
-#     name: memberUid
-#     values: '{{ item }}'
-#     bind_dn: 'cn=ldapadm,{{ suffix }}'
-#     bind_pw: '{{ rootpw }}'
-#     state: absent
-#   with_items:
-#     - noexist
+

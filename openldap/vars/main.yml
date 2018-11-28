@@ -3,7 +3,8 @@
   organization: example
   suffix: dc=example,dc=com
   rootpw: password
-  app_path: /etc/openldap
+  path: /etc/openldap
+  pki: /etc/pki/tls/certs
   country: US
   state: orego
   location: portland

@@ -1,6 +1,6 @@
 ---
 #https://www.itzgeek.com/how-tos/linux/centos-how-tos/configure-openldap-with-ssl-on-centos-7-rhel-7.html
-- name: Installing ldap server package
+- name: installing ldap server package
   yum: name={{ item }} state=latest
   with_items:
     - openldap
@@ -9,35 +9,50 @@
     - openldap-servers-sql
     - openldap-devel
     - python-ldap
-  notify: restart slapd
 
-- name: Configure ldap database
-  shell: |
-    cp /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG
-    chown ldap: /var/lib/ldap/*
-  become: true
+- name: enabling ldap autostart
+  service: name=slapd enabled=yes state=started
 
-- name: Generate admin password hash
+- name: check if ldap is running
+  command: systemctl status slapd
+  ignore_errors: yes
+  changed_when: false
+  register: service_slapd_status
+
+- name: report status of ldap
+  fail:
+    msg: |
+      Service apache2 is not running.
+      Output of `systemctl status apache2`:
+      {{ service_slapd_status.stdout }}
+      {{ service_slapd_status.stderr }}
+  when: service_slapd_status | failed
+
+- name: generate admin password hash
   shell: slappasswd -h {SSHA} -s {{ rootpw }}
   register: ldapregrootpw
 
-- name: Copy admin_config_pw.ldif
-  template: src=admin_config_pw.ldif dest=/tmp/admin_config_pw.ldif owner=root group=root mode=0600
+- name: create random temporary directory for ldif file
+  command: mktemp -d
+  register: slapd_register_tempdir
 
-- name: Admin password
-  shell: ldapmodify -Y EXTERNAL -H ldapi:/// -f /tmp/admin_config_pw.ldif
+- name: copy admin_config_pw.ldif
+  template: src=admin_config_pw.ldif dest={{ slapd_register_tempdir.stdout }}/admin_config_pw.ldif owner=root group=root mode=0600
+
+- name: admin password
+  shell: ldapmodify -Y EXTERNAL -H ldapi:/// -f {{ slapd_register_tempdir.stdout }}/admin_config_pw.ldif
   become: true
   ignore_errors: True
 
-- name: Copy ldap schema
-  copy: src={{ item }}.ldif dest={{ app_path }}/schema owner=root group=root mode=0644
+- name: copy ldap schema
+  copy: src={{ item }}.ldif dest={{ path }}/schema owner=root group=root mode=0644
   with_items:
       - sshpubkey
       - sudo
       - ldapns
 
-- name: Load some schemas (ignoring duplicate entries error for idempotence)
-  shell:  ldapadd -Y EXTERNAL -H ldapi:/// -f {{ app_path }}/schema/{{ item }}.ldif
+- name: load some schemas (ignoring duplicate entries error for idempotence)
+  shell:  ldapadd -Y EXTERNAL -H ldapi:/// -f {{ path }}/schema/{{ item }}.ldif
   register: ldap_result_code
   failed_when: ldap_result_code.rc not in [0,80]
   changed_when: ldap_result_code.rc not in [0,80]
@@ -51,40 +66,55 @@
   become: true
   ignore_errors: True
 
-- name: Copy basedomain.ldif
-  template: src=basedomain.ldif dest=/tmp/basedomain.ldif owner=root group=root mode=0600
+- name: copy basedomain.ldif
+  template: src=basedomain.ldif dest={{ slapd_register_tempdir.stdout }}/basedomain.ldif owner=root group=root mode=0600
 
-- name: Load base configuration into ldap
-  shell: ldapadd -x -D "cn=ldapadm,{{ suffix }}" -w {{ rootpw }} -f /tmp/basedomain.ldif
+- name: load base configuration into ldap
+  shell: ldapadd -x -D "cn=ldapadm,{{ suffix }}" -w {{ rootpw }} -f {{ slapd_register_tempdir.stdout }}/basedomain.ldif
   become: true
   ignore_errors: True
 
-# ### openssl
+# ssl/tsl
 
-# - name: Create the directory for ldap certificates
-#   file: path={{ app_path }}/certs/ state=directory owner=ldap group=ldap
+- name: create the directory for ldap certificates
+  file: path={{ path }}/certs/ state=directory owner=ldap group=ldap
 
-# - name: create self-signed SSL cert
-#   command: openssl req -new -nodes -x509 -subj "/C={{ country }}/ST={{ state }}/L={{ location }}/O={{ organization }}/CN={{ ansible_hostname }}/" -days 3650 -keyout {{ app_path }}/certs/{{ domain }}-key.pem -out {{ app_path }}/certs/{{ domain }}-cert.pem -extensions v3_ca 
-#            creates={{ app_path }}/certs/{{ domain }}-cert.pem
+- name: generate the private key for certificate request
+  shell: openssl genrsa -aes128 -passout pass:password 2048 > {{ path }}/certs/server.key
 
-# - name: Copy addcerts.ldif
-#   template: src=addcerts.ldif dest=/tmp/addcerts.ldif owner=root group=root mode=0600
+- name: strip the passphrase from the key
+  shell: openssl rsa -in {{ path }}/certs/server.key -passin pass:password -out {{ path }}/certs/server.key
 
-# - name: Load certificat configuration into ldap
-#   shell: ldapmodify -Y EXTERNAL -H ldapi:/// -f /tmp/addcerts.ldif
-#   become: true
-#   ignore_errors: True
+- name: create the new certificate
+  shell: openssl req -utf8 -new -subj '/C={{ country }}/ST={{ state }}/L={{ location }}/O={{ organization }}/CN={{ ansible_hostname }}/' -key {{ path }}/certs/server.key -out {{ path }}/certs/server.csr
 
-# - name: Remove ldif files
-#   file:
-#     path: "{{ item }}"
-#     state: absent
-#   with_fileglob:
-#     - "/tmp/*.ldif"
+- name: create and sign the the new certificate
+  shell: openssl x509 -in {{ path }}/certs/server.csr -out {{ path }}/certs/server.crt -req -signkey {{ path }}/certs/server.key -days 3650
 
-- name: Enabling ldap autostart
-  service: name=slapd enabled=yes state=started
+- name: copy ca-bundle.crt file
+  command: cp {{ pki }}/ca-bundle.crt {{ path }}/certs/
+  become: true
+
+- name: copy addcerts.ldif
+  template: src=addcerts.ldif dest={{ slapd_register_tempdir.stdout }}/addcerts.ldif owner=root group=root mode=0600
+
+- name: load certificat configuration into ldap
+  shell: ldapmodify -Y EXTERNAL -H ldapi:/// -f {{ slapd_register_tempdir.stdout }}/addcerts.ldif
+  become: true
+  ignore_errors: True
+
+- name: clean temporary directory
+  file:
+    state: absent
+    path: "{{ slapd_register_tempdir.stdout }}"
+
+- name: configure ldap database
+  shell: |
+    cp /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG
+    chown ldap: /var/lib/ldap/*
+  become: true
+  notify:
+    - restart slapd
 
 - name: run an ldapquery at the end to make sure it responds
   command: ldapsearch -x -H ldap://localhost -b {{ suffix }}
