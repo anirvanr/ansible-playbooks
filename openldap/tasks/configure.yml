@@ -1,0 +1,93 @@
+---
+#https://www.itzgeek.com/how-tos/linux/centos-how-tos/configure-openldap-with-ssl-on-centos-7-rhel-7.html
+- name: Installing ldap server package
+  yum: name={{ item }} state=latest
+  with_items:
+    - openldap
+    - openldap-servers
+    - openldap-clients
+    - openldap-servers-sql
+    - openldap-devel
+    - python-ldap
+  notify: restart slapd
+
+- name: Configure ldap database
+  shell: |
+    cp /usr/share/openldap-servers/DB_CONFIG.example /var/lib/ldap/DB_CONFIG
+    chown ldap: /var/lib/ldap/*
+  become: true
+
+- name: Generate admin password hash
+  shell: slappasswd -h {SSHA} -s {{ rootpw }}
+  register: ldapregrootpw
+
+- name: Copy admin_config_pw.ldif
+  template: src=admin_config_pw.ldif dest=/tmp/admin_config_pw.ldif owner=root group=root mode=0600
+
+- name: Admin password
+  shell: ldapmodify -Y EXTERNAL -H ldapi:/// -f /tmp/admin_config_pw.ldif
+  become: true
+  ignore_errors: True
+
+- name: Copy ldap schema
+  copy: src={{ item }}.ldif dest={{ app_path }}/schema owner=root group=root mode=0644
+  with_items:
+      - sshpubkey
+      - sudo
+      - ldapns
+
+- name: Load some schemas (ignoring duplicate entries error for idempotence)
+  shell:  ldapadd -Y EXTERNAL -H ldapi:/// -f {{ app_path }}/schema/{{ item }}.ldif
+  register: ldap_result_code
+  failed_when: ldap_result_code.rc not in [0,80]
+  changed_when: ldap_result_code.rc not in [0,80]
+  with_items:
+      - cosine
+      - inetorgperson
+      - nis
+      - sshpubkey
+      - sudo
+      - ldapns
+  become: true
+  ignore_errors: True
+
+- name: Copy basedomain.ldif
+  template: src=basedomain.ldif dest=/tmp/basedomain.ldif owner=root group=root mode=0600
+
+- name: Load base configuration into ldap
+  shell: ldapadd -x -D "cn=ldapadm,{{ suffix }}" -w {{ rootpw }} -f /tmp/basedomain.ldif
+  become: true
+  ignore_errors: True
+
+# ### openssl
+
+# - name: Create the directory for ldap certificates
+#   file: path={{ app_path }}/certs/ state=directory owner=ldap group=ldap
+
+# - name: create self-signed SSL cert
+#   command: openssl req -new -nodes -x509 -subj "/C={{ country }}/ST={{ state }}/L={{ location }}/O={{ organization }}/CN={{ ansible_hostname }}/" -days 3650 -keyout {{ app_path }}/certs/{{ domain }}-key.pem -out {{ app_path }}/certs/{{ domain }}-cert.pem -extensions v3_ca 
+#            creates={{ app_path }}/certs/{{ domain }}-cert.pem
+
+# - name: Copy addcerts.ldif
+#   template: src=addcerts.ldif dest=/tmp/addcerts.ldif owner=root group=root mode=0600
+
+# - name: Load certificat configuration into ldap
+#   shell: ldapmodify -Y EXTERNAL -H ldapi:/// -f /tmp/addcerts.ldif
+#   become: true
+#   ignore_errors: True
+
+# - name: Remove ldif files
+#   file:
+#     path: "{{ item }}"
+#     state: absent
+#   with_fileglob:
+#     - "/tmp/*.ldif"
+
+- name: Enabling ldap autostart
+  service: name=slapd enabled=yes state=started
+
+- name: run an ldapquery at the end to make sure it responds
+  command: ldapsearch -x -H ldap://localhost -b {{ suffix }}
+  register: cmd_result
+
+- debug: msg="{{ cmd_result.stdout }}"

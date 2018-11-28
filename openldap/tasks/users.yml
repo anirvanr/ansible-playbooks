@@ -1,0 +1,23 @@
+---
+
+- name: user entries
+  #include_vars: vars/users.yml
+  ldap_entry:
+    dn: "uid={{ item.value.uid }},ou=People,{{ suffix }}"
+    objectClass:
+      - inetOrgPerson
+      - posixAccount
+      - ldapPublicKey
+    attributes:
+      uidNumber: "{{ item.value.uidNumber }}"
+      gidNumber: "{{ item.value.gidNumber }}"
+      sn: "{{ item.value.sn }}"
+      cn: "{{ item.value.cn }}"
+      userPassword: "{{ item.value.userPassword }}"
+      homeDirectory: "/home/{{ item.value.uid }}"
+      mail: "{{ item.value.uid }}@{{ domain }}"
+      sshPublicKey: "{{ item.value.sshPublicKey }}"
+      uid: "{{ item.value.uid }}"
+    bind_dn: "cn=ldapadm,{{ suffix }}"
+    bind_pw: "{{ rootpw }}"
+  with_dict: "{{ldap_users}}"

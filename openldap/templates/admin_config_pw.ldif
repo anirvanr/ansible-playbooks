@@ -1,12 +1,12 @@
 dn: olcDatabase={2}hdb,cn=config
 changetype: modify
 replace: olcSuffix
-olcSuffix: {{ openldap_server_suffix }}
+olcSuffix: {{ suffix }}
 
 dn: olcDatabase={2}hdb,cn=config
 changetype: modify
 replace: olcRootDN
-olcRootDN: cn=ldapadm,{{ openldap_server_suffix }}
+olcRootDN: cn=ldapadm,{{ suffix }}
 
 dn: olcDatabase={2}hdb,cn=config
 changetype: modify

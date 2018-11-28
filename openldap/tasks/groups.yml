@@ -1,0 +1,38 @@
+---
+
+- name: group entries
+  ldap_entry:
+    dn: 'cn={{ item }},ou=Group,{{ suffix }}'
+    objectClass: groupOfNames
+    attributes:
+      cn: '{{ item }}'
+      member: cn=noexist
+    bind_dn: "cn=ldapadm,{{ suffix }}"
+    bind_pw: "{{ rootpw }}"
+    state: present
+  with_items:
+    - developer
+    - support
+
+- name: developer group members
+  ldap_attr:
+    dn: 'cn=developer,ou=Group,{{ suffix }}'
+    name: member
+    values: 'uid={{ item }},ou=People,{{ suffix }}'
+    bind_dn: 'cn=ldapadm,{{ suffix }}'
+    bind_pw: '{{ rootpw }}'
+    state: present
+  with_items:
+    - user01
+    - user02
+
+- name: support group members
+  ldap_attr:
+    dn: 'cn=support,ou=Group,{{ suffix }}'
+    name: member
+    values: 'uid={{ item }},ou=People,{{ suffix }}'
+    bind_dn: 'cn=ldapadm,{{ suffix }}'
+    bind_pw: '{{ rootpw }}'
+    state: present
+  with_items:
+    - user02

@@ -1,17 +1,23 @@
-dn: {{ openldap_server_suffix }}
-dc: {{ openldap_organization }}
+dn: {{ suffix }}
+dc: {{ organization }}
 objectClass: top
 objectClass: domain
 
-dn: cn=ldapadm,{{ openldap_server_suffix }}
+dn: cn=ldapadm,{{ suffix }}
 objectClass: organizationalRole
 cn: ldapadm
 description: LDAP Administrator
 
-dn: ou=People,{{ openldap_server_suffix }}
+dn: ou=People,{{ suffix }}
 objectClass: organizationalUnit
 ou: People
 
-dn: ou=Group,{{ openldap_server_suffix }}
+dn: ou=Group,{{ suffix }}
 objectClass: organizationalUnit
 ou: Group
+
+dn: ou=SUDOers,{{ suffix }}
+objectClass: top
+objectClass: organizationalUnit
+ou: SUDOers
+description: SUDOers container
