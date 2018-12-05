@@ -22,8 +22,8 @@
 - name: report status of ldap
   fail:
     msg: |
-      Service apache2 is not running.
-      Output of `systemctl status apache2`:
+      Service slapd is not running.
+      Output of `systemctl status slapd`:
       {{ service_slapd_status.stdout }}
       {{ service_slapd_status.stderr }}
   when: service_slapd_status | failed
@@ -74,8 +74,6 @@
   become: true
   ignore_errors: True
 
-# ssl/tsl
-
 - name: create the directory for ldap certificates
   file: path={{ path }}/certs/ state=directory owner=ldap group=ldap
 
@@ -88,7 +86,7 @@
 - name: create the new certificate
   shell: openssl req -utf8 -new -subj '/C={{ country }}/ST={{ state }}/L={{ location }}/O={{ organization }}/CN={{ ansible_hostname }}/' -key {{ path }}/certs/server.key -out {{ path }}/certs/server.csr
 
-- name: create and sign the the new certificate
+- name: sign the new certificate
   shell: openssl x509 -in {{ path }}/certs/server.csr -out {{ path }}/certs/server.crt -req -signkey {{ path }}/certs/server.key -days 3650
 
 - name: copy ca-bundle.crt file
