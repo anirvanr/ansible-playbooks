@@ -15,6 +15,7 @@
       cn: "{{ item.value.cn }}"
       userPassword: "{{ item.value.userPassword }}"
       homeDirectory: "/home/{{ item.value.uid }}"
+      loginShell: "{{ item.value.loginShell }}"
       mail: "{{ item.value.uid }}@{{ domain }}"
       sshPublicKey: "{{ item.value.sshPublicKey }}"
       uid: "{{ item.value.uid }}"

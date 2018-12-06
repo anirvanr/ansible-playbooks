@@ -1,5 +1,5 @@
 ---
-#https://www.itzgeek.com/how-tos/linux/centos-how-tos/configure-openldap-with-ssl-on-centos-7-rhel-7.html
+
 - name: installing ldap server package
   yum: name={{ item }} state=latest
   with_items:
@@ -41,6 +41,14 @@
 
 - name: admin password
   shell: ldapmodify -Y EXTERNAL -H ldapi:/// -f {{ slapd_register_tempdir.stdout }}/admin_config_pw.ldif
+  become: true
+  ignore_errors: True
+
+- name: copy monitor.ldif
+  template: src=monitor.ldif dest={{ slapd_register_tempdir.stdout }}/monitor.ldif owner=root group=root mode=0600
+
+- name: configure monitoring database configuration file
+  shell: ldapmodify -Y EXTERNAL -H ldapi:/// -f {{ slapd_register_tempdir.stdout }}/monitor.ldif
   become: true
   ignore_errors: True
 
@@ -113,6 +121,26 @@
   become: true
   notify:
     - restart slapd
+
+- name: enable ldaps
+  lineinfile:
+    dest: /etc/sysconfig/slapd
+    regexp: '^SLAPD_URLS=(.*)$'
+    line: 'SLAPD_URLS="ldapi:/// ldap:/// ldaps:///"'
+    backrefs: yes
+  notify:
+    - restart slapd
+
+- name: configure ldap logging
+  lineinfile:
+    path: /etc/rsyslog.conf
+    line: 'local4.* /var/log/ldap.log'
+
+- name: restart service rsyslog
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: rsyslog
 
 - name: run an ldapquery at the end to make sure it responds
   command: ldapsearch -x -H ldap://localhost -b {{ suffix }}
