@@ -1,10 +1,9 @@
-
-  domain: example.com
-  organization: "{{ domain.split('.')[0] }}"
-  suffix: dc={{ domain.split('.')[0] }},dc={{ domain.split('.')[1] }}
-  rootpw: password
-  path: /etc/openldap
-  pki: /etc/pki/tls/certs
-  country: US
-  state: orego
-  location: portland
+domain: example.com
+organization: "{{ domain.split('.')[0] }}"
+suffix: dc={{ domain.split('.')[0] }},dc={{ domain.split('.')[1] }}
+rootpw: password
+path: /etc/openldap
+pki: /etc/pki/tls/certs
+country: US
+state: orego
+location: portland

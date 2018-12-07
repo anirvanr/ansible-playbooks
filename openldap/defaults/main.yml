@@ -1,4 +1,3 @@
-
 ldap_users:
   user_id1:
     uid: user01
