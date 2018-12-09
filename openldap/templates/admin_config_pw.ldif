@@ -11,4 +11,4 @@ olcRootDN: cn=ldapadm,{{ suffix }}
 dn: olcDatabase={2}hdb,cn=config
 changetype: modify
 replace: olcRootPW
-olcRootPW: {{ ldapregrootpw.stdout }}
+olcRootPW: {{ ldap_root_pw.stdout }}

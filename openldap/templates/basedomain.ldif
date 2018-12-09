@@ -20,4 +20,3 @@ dn: ou=SUDOers,{{ suffix }}
 objectClass: top
 objectClass: organizationalUnit
 ou: SUDOers
-description: SUDOers container

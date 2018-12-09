@@ -1,6 +1,6 @@
 ---
 
-- name: be sure sudo defaults setting
+- name: Be sure sudo defaults setting
   ldap_entry:
     dn: "cn=defaults,ou=SUDOers,{{ suffix }}"
     objectClass: 
@@ -15,7 +15,7 @@
     bind_dn: 'cn=ldapadm,{{ suffix }}'
     bind_pw: '{{ rootpw }}'
 
-- name: be sure sudo group is present
+- name: Be sure sudo group is present
   ldap_entry:
     dn: "cn=%wheel,ou=SUDOers,{{ suffix }}"
     objectClass: 
@@ -29,7 +29,7 @@
     bind_dn: 'cn=ldapadm,{{ suffix }}'
     bind_pw: '{{ rootpw }}'
 
-- name: group entries
+- name: Group entries
   ldap_entry:
     dn: 'cn=wheel,ou=Group,{{ suffix }}'
     objectClass: posixGroup
@@ -41,7 +41,7 @@
     bind_pw: "{{ rootpw }}"
     state: present
 
-- name: wheel group members
+- name: Wheel group members
   ldap_attr:
     dn: 'cn=wheel,ou=Group,{{ suffix }}'
     name: memberUid

@@ -1,6 +1,6 @@
 ---
 
-- name: group entries
+- name: Group entries
   ldap_entry:
     dn: 'cn={{ item }},ou=Group,{{ suffix }}'
     objectClass: groupOfNames
@@ -14,7 +14,7 @@
     - developer
     - support
 
-- name: developer group members
+- name: Developer group members
   ldap_attr:
     dn: 'cn=developer,ou=Group,{{ suffix }}'
     name: member
@@ -26,7 +26,7 @@
     - user01
     - user02
 
-- name: support group members
+- name: Support group members
   ldap_attr:
     dn: 'cn=support,ou=Group,{{ suffix }}'
     name: member

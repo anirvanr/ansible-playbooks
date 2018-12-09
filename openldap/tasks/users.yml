@@ -1,6 +1,6 @@
 ---
 
-- name: user entries
+- name: User entries
   #include_vars: vars/users.yml
   ldap_entry:
     dn: "uid={{ item.value.uid }},ou=People,{{ suffix }}"
