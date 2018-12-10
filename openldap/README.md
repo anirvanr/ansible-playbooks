@@ -33,7 +33,7 @@ Including an example of how to use your role (for instance, with variables passe
 
 vagrant_ansible_playbook.yml
 
-```
+```yml
 - hosts: server
   become: yes
   gather_facts: yes
