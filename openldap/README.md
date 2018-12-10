@@ -6,7 +6,8 @@ Configure LDAP over TLS to make connection be secure
 Requirements
 ------------
 
-Ansible 2.4.3.0 or higher.
+![Ansible](https://img.shields.io/badge/ansible-2.4.3.0-green.svg)
+
 CentOS Linux release 7.5.1804 (Core)
 
 
