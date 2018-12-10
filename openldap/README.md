@@ -7,6 +7,7 @@ Requirements
 ------------
 
 Ansible 2.4.3.0 or higher.
+CentOS Linux release 7.5.1804 (Core)
 
 
 Role Variables

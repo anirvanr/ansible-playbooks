@@ -1,0 +1,9 @@
+/var/log/ldap.log {
+    weekly
+    size 25M
+    rotate 7
+    missingok
+    compress
+    delaycompress
+    copytruncate
+}

@@ -41,7 +41,6 @@
 
 - name: Admin password
   shell: ldapmodify -Y EXTERNAL -H ldapi:/// -f {{ slapd_register_tempdir.stdout }}/admin_config_pw.ldif
-  become: true
   ignore_errors: True
 
 - name: Copy monitor.ldif
@@ -49,7 +48,6 @@
 
 - name: Modify ldap with monitor.ldif
   shell: ldapmodify -Y EXTERNAL -H ldapi:/// -f {{ slapd_register_tempdir.stdout }}/monitor.ldif
-  become: true
   ignore_errors: True
 
 - name: Copy ldap schema
@@ -71,16 +69,18 @@
       - sshpubkey
       - sudo
       - ldapns
-  become: true
   ignore_errors: True
 
 - name: Copy basedomain.ldif
   template: src=basedomain.ldif dest={{ slapd_register_tempdir.stdout }}/basedomain.ldif owner=root group=root mode=0600
 
-- name: Load base configuration into ldap
-  shell: ldapadd -x -D "cn=ldapadm,{{ suffix }}" -w {{ rootpw }} -f {{ slapd_register_tempdir.stdout }}/basedomain.ldif
-  become: true
-  ignore_errors: True
+- name : Check if basedomain file exist
+  stat: path={{ path }}/basedomain_created
+  register: basedomain_created_result
+
+- name: Change the base domain for ldap
+  shell: ldapadd -x -D "cn=ldapadm,{{ suffix }}" -w {{ rootpw }} -f {{ slapd_register_tempdir.stdout }}/basedomain.ldif && touch {{ path }}/basedomain_created
+  when: basedomain_created_result.stat.exists == False
 
 - name: Apply SSL
   block:
@@ -94,7 +94,6 @@
 
     - name: Load certificate configuration into ldap
       shell: ldapmodify -Y EXTERNAL -H ldapi:/// -f {{ slapd_register_tempdir.stdout }}/addcerts.ldif
-      ignore_errors: True
 
     - name: Add ldaps:// into /etc/sysconfig/slapd
       lineinfile:
@@ -105,7 +104,6 @@
       notify:
         - restart slapd
   when: ssl
-  become: true
 
 - name: Clean temporary directory
   file:
@@ -132,6 +130,12 @@
     state: restarted
     daemon_reload: yes
     name: rsyslog
+
+- name: Setting up logrotate for ldap log
+  copy:
+    src: ldap
+    dest: /etc/logrotate.d
+    mode: 0644
 
 - name: Run an ldapquery at the end to make sure it responds
   command: ldapsearch -x -H ldap://localhost -b {{ suffix }}
