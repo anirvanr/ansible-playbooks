@@ -81,6 +81,7 @@
 - name: Change the base domain for ldap
   shell: ldapadd -x -D "cn=ldapadm,{{ suffix }}" -w {{ rootpw }} -f {{ slapd_register_tempdir.stdout }}/basedomain.ldif && touch {{ path }}/basedomain_created
   when: basedomain_created_result.stat.exists == False
+  ignore_errors: True
 
 - name: Apply SSL
   block:
